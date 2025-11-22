@@ -1,4 +1,3 @@
-
 name: Build and analyze with SonarCloud
 
 on:
@@ -7,21 +6,22 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+    branches:
+      - main
 
 jobs:
   build:
+    name: Build
     runs-on: windows-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: '8.0.x'
 
       - name: Install SonarScanner
         run: dotnet tool install --global dotnet-sonarscanner
@@ -29,12 +29,12 @@ jobs:
       - name: Start SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: dotnet-sonarscanner begin /k:"Saenz10200_ParcialCleanArch" /o:"saenz10200"
+        run: dotnet-sonarscanner begin /k:"Saenz10200_ParcialCleanArch" /o:"saenz10200" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
 
       - name: Build solution
-        run: dotnet build BadCleanArch.sln
+        run: dotnet build ./Parcial_CleanFixed/BadCleanArch.sln
 
       - name: End SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: dotnet-sonarscanner end
+        run: dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
