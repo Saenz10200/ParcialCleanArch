@@ -1,47 +1,40 @@
-name: SonarCloud .NET
+
+name: Build and analyze with SonarCloud
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    types: [opened, synchronize, reopened]
 
 jobs:
   build:
-    name: Build and analyze with SonarCloud
     runs-on: windows-latest
 
     steps:
-      # 1. Descargar el código
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2. Instalar .NET (ajusta si usas otra versión)
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: 8.0.x
 
-      # 3. Compilar y analizar con SonarCloud
-      #    OJO: trabajamos dentro de la carpeta Parcial_CleanFixed,
-      #    que es donde están BadCleanArch.sln y src/
-      - name: Build and analyze
-        working-directory: Parcial_CleanFixed
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Start SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          dotnet tool install --global dotnet-sonarscanner
+        run: dotnet-sonarscanner begin /k:"Saenz10200_ParcialCleanArch" /o:"saenz10200"
 
-          dotnet sonarscanner begin `
-            /k:"Saenz10200_ParcialCleanArch" `
-            /o:"saenz10200" `
-            /d:sonar.host.url="https://sonarcloud.io" `
-            /d:sonar.token="${env:SONAR_TOKEN}"
+      - name: Build solution
+        run: dotnet build BadCleanArch.sln
 
-          dotnet restore
-          dotnet build --no-incremental
-
-          dotnet sonarscanner end `
-            /d:sonar.token="${env:SONAR_TOKEN}"
+      - name: End SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet-sonarscanner end
