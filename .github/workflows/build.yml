@@ -1,18 +1,16 @@
-name: Build and analyze with SonarCloud
+name: Build
 
 on:
   push:
     branches:
       - main
   pull_request:
-    types: [opened, synchronize, reopened]
     branches:
       - main
 
 jobs:
   build:
-    name: Build
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -21,20 +19,23 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: 9.0.x
 
       - name: Install SonarScanner
-        run: dotnet tool install --global dotnet-sonarscanner
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
 
       - name: Start SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: dotnet-sonarscanner begin /k:"Saenz10200_ParcialCleanArch" /o:"saenz10200" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
+        run: |
+          dotnet-sonarscanner begin /k:"Saenz10200_ParcialCleanArch" /o:"saenz10200" /d:sonar.token="${SONAR_TOKEN}" /d:sonar.host.url="https://sonarcloud.io"
 
       - name: Build solution
-        run: dotnet build ./Parcial_CleanFixed/BadCleanArch.sln
+        run: dotnet build Parcial_CleanFixed/BadCleanArch.sln
 
       - name: End SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+        run: |
+          dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
