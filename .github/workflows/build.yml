@@ -1,29 +1,28 @@
-name: Build
+name: Build and analyze with SonarCloud
 
 on:
   push:
     branches:
       - main
   pull_request:
-    branches:
-      - main
+    types: [opened, synchronize, reopened]
 
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: '8.0.x'
 
       - name: Install SonarScanner
-        run: |
-          dotnet tool install --global dotnet-sonarscanner
+        run: dotnet tool install --global dotnet-sonarscanner
 
       - name: Start SonarCloud analysis
         env:
@@ -32,10 +31,9 @@ jobs:
           dotnet-sonarscanner begin /k:"Saenz10200_ParcialCleanArch" /o:"saenz10200" /d:sonar.token="${SONAR_TOKEN}" /d:sonar.host.url="https://sonarcloud.io"
 
       - name: Build solution
-        run: dotnet build Parcial_CleanFixed/BadCleanArch.sln
+        run: dotnet build Parcial_CleanFixed_FIXED/BadCleanArch.sln
 
       - name: End SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
+        run: dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"
