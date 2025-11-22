@@ -1,45 +1,47 @@
-name: Build and analyze with SonarCloud
+name: SonarCloud .NET
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   build:
-    name: Build and analyze
-    runs-on: ubuntu-latest
+    name: Build and analyze with SonarCloud
+    runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # 1. Descargar el código
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # 2. Instalar .NET (ajusta si usas otra versión)
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: "8.0.x"
 
-      - name: Authenticate to SonarCloud
-        uses: SonarSource/sonarcloud-github-action@v2
-        with:
-          token: ${{ secrets.SONAR_TOKEN }}
+      # 3. Compilar y analizar con SonarCloud
+      #    OJO: trabajamos dentro de la carpeta Parcial_CleanFixed,
+      #    que es donde están BadCleanArch.sln y src/
+      - name: Build and analyze
+        working-directory: Parcial_CleanFixed
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
 
-      - name: Restore dependencies
-        run: dotnet restore BadCleanArch.sln
+          dotnet sonarscanner begin `
+            /k:"Saenz10200_ParcialCleanArch" `
+            /o:"saenz10200" `
+            /d:sonar.host.url="https://sonarcloud.io" `
+            /d:sonar.token="${env:SONAR_TOKEN}"
 
-      - name: Build
-        run: dotnet build BadCleanArch.sln --configuration Release --no-restore
+          dotnet restore
+          dotnet build --no-incremental
 
-      - name: Test
-        run: dotnet test BadCleanArch.sln --no-build --verbosity normal
-
-      - name: Analyze with SonarCloud
-        uses: SonarSource/sonarcloud-github-action@v2
-        with:
-          args: >
-            -Dsonar.projectKey=Saenz10200_ParcialCleanArch
-            -Dsonar.organization=saenz10200
+          dotnet sonarscanner end `
+            /d:sonar.token="${env:SONAR_TOKEN}"
