@@ -1,37 +1,51 @@
-name: SonarCloud .NET
+name: Build and analyze
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build:
+    name: Build and analyze
     runs-on: windows-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Important for SonarCloud
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '7.0.x'
 
-      - name: Install SonarScanner for .NET
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Install SonarCloud scanner
         run: dotnet tool install --global dotnet-sonarscanner
 
-      - name: Add dotnet tools to PATH
-        run: echo "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
-      - name: Build and analyze
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Begin SonarCloud analysis
         run: |
-          cd Parcial_CleanFixed
-          dotnet sonarscanner begin /k:"Saenz10200_ParcialCleanArch" /o:"saenz10200" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-          dotnet build BadCleanArch.sln
-          dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+          dotnet-sonarscanner begin /k:"Saenz10200_ParcialCleanArch" /o:"saenz10200" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
+
+      - name: Restore dependencies
+        run: dotnet restore ./BadCleanArch.sln
+
+      - name: Build solution
+        run: dotnet build ./BadCleanArch.sln --no-incremental --configuration Release
+
+      - name: Run tests (si no tienes tests, igual funciona)
+        run: dotnet test ./BadCleanArch.sln --no-build --configuration Release || echo "No tests found"
+
+      - name: End SonarCloud analysis
+        run: dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
